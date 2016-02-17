@@ -3,6 +3,8 @@
 This is a small python script to get best deals from playstation store. 
 Checking against weekly deals and PSN free games & discounts
 
+![](http://content.screencast.com/users/kireevco/folders/Jing/media/6f269218-4f11-4753-82fb-092f7f3ca417/00000380.png)
+
 ### QuickStart
 ```
 pip install https://github.com/kireevco/psndeals.git@master
