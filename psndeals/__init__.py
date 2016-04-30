@@ -58,7 +58,7 @@ def show(psndeals, platform, country, sort_method, reverse_sort, table):
                 'orig_price': "${orig_price}".format(orig_price=deal['orig_price']),
                 'price': "${price}".format(price=deal['price']),
                 'score': "{score}".format(score=deal['score']),
-                'release_date': "{release_date}".format(release_date=deal['release_date'].year),
+                'release_date': "{month} {year}".format(month=deal['release_date'].strftime("%b"), year=deal['release_date'].year),
 
             })
 
