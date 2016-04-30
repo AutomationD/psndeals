@@ -84,7 +84,7 @@ def show(psndeals, platform, country, sort_method, reverse_sort, table):
         if table:
             print(tabulate(deals_filtered, headers={
                 'discount': 'Discount',
-                'name':'Name',
+                'name': 'Name',
                 'score': 'Score',
                 'release_date': 'Released',
                 'orig_price': "Original Price",
@@ -163,31 +163,31 @@ def get_deals(platform, country):
             response_data = json.loads(response.content)
             for item in response_data['links']:
                 if 'default_sku' in item:
+                    if item['top_category'] == 'downloadable_game':
+                        release_date = datetime.datetime.strptime(item['release_date'], "%Y-%m-%dT%H:%M:%SZ")
+                        savings = round((item['default_sku']['price'] / 100 * item['default_sku']['rewards'][0]['discount'] / 100),2)
+                        discount = item['default_sku']['rewards'][0]['discount']
+                        now = datetime.datetime.today()
+                        age = (now.year - release_date.year)*12 + now.month - release_date.month
+                        if age < 1:
+                            age = 1
 
-                    release_date = datetime.datetime.strptime(item['release_date'], "%Y-%m-%dT%H:%M:%SZ")
-                    savings = round((item['default_sku']['price'] / 100 * item['default_sku']['rewards'][0]['discount'] / 100),2)
-                    discount = item['default_sku']['rewards'][0]['discount']
-                    now = datetime.datetime.today()
-                    age = (now.year - release_date.year)*12 + now.month - release_date.month
-                    if age < 1:
-                        age = 1
+                        if discount > 0:
+                            score = float(discount) / float(age) / 10
+                        else:
+                            score = 0
 
-                    if discount > 0:
-                        score = float(discount) / float(age) / 10
-                    else:
-                        score = 0
-
-                    deals.append({
-                        'psn_sku_id': item['id'],
-                        'name': item['name'],
-                        'discount': discount,
-                        'orig_price': (item['default_sku']['price'] / 100),
-                        'price': (item['default_sku']['rewards'][0]['price'] / 100),
-                        'savings': savings,
-                        'release_date': release_date,
-                        'score':  round(score, 2),
-                        'age': age,
-                    })
+                        deals.append({
+                            'psn_sku_id': item['id'],
+                            'name': item['name'],
+                            'discount': discount,
+                            'orig_price': (item['default_sku']['price'] / 100),
+                            'price': (item['default_sku']['rewards'][0]['price'] / 100),
+                            'savings': savings,
+                            'release_date': release_date,
+                            'score':  round(score, 2),
+                            'age': age,
+                        })
         else:
             # If response code is not ok (200), print the resulting http error code with description
             response.raise_for_status()
