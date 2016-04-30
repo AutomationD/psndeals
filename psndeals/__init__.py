@@ -176,8 +176,7 @@ def get_deals(platform, country):
                             score = float(discount) / float(age) / 10
                         else:
                             score = 0
-
-                        deals.append({
+                        deal = {
                             'psn_sku_id': item['id'],
                             'name': item['name'],
                             'discount': discount,
@@ -187,7 +186,9 @@ def get_deals(platform, country):
                             'release_date': release_date,
                             'score':  round(score, 2),
                             'age': age,
-                        })
+                        }
+                        if deal not in deals:
+                            deals.append(deal)
         else:
             # If response code is not ok (200), print the resulting http error code with description
             response.raise_for_status()
