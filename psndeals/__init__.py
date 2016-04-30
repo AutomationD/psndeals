@@ -3,6 +3,7 @@ import json
 from pprint import pprint
 import operator
 import time
+import datetime
 import click
 import psndeals.auth
 
@@ -36,19 +37,35 @@ def cli(ctx, config, verbose):
 @cli.command()
 @click.option('--platform', '-p', default='ps4')
 @click.option('--country', '-c', default='US')
-@click.option('--sort', '-s', type=click.Choice(['savings', 'price']), default='savings')
+@click.option('--sort-method', '-s', type=click.Choice(['savings', 'price', 'release_date', 'score', 'age']), default='savings')
 @click.option('--reverse-sort', '-r', is_flag=True, default=True)
+@click.option('--table', '-t', is_flag=True, default=True)
 @pass_psndeals
-def show(psndeals, platform, country, sort, reverse_sort):
+def show(psndeals, platform, country, sort_method, reverse_sort, table):
     deals = get_deals(platform, country)
+    deals_filtered = []
+
     if deals:
         # Sort
-        deals.sort(key=operator.itemgetter(sort), reverse=reverse_sort)
-        for i, deal in enumerate(deals):
-            if deal['savings'] > 15 or (deal['savings'] > 10 and deal['discount'] == 100):
-                click.secho(u"------------------------------------------------------")
+        click.secho(u"**************************************************")
+        click.secho(u"Found Deals! Sorting by {sort_method} in {sort_order} order.".format(sort_order="descending" if reverse_sort else "ascending", sort_method=sort_method))
+        deals.sort(key=operator.itemgetter(sort_method), reverse=reverse_sort)
 
-                click.secho(u"{name} ({release_date})".format(name=deal['name'], release_date=time.strftime("%b %Y", deal['release_date'])), fg='blue')
+        for i, deal in enumerate(deals):
+            deals_filtered.append({
+                'name': deal['name'],
+                'discount': "{discount}%".format(discount=deal['discount'],),
+                'orig_price': "${orig_price}".format(orig_price=deal['orig_price']),
+                'price': "${price}".format(price=deal['price']),
+                'score': "{score}".format(score=deal['score']),
+                'release_date': "{release_date}".format(release_date=deal['release_date'].year),
+
+            })
+
+            if not table:
+                if deal['savings'] > 15 or (deal['savings'] > 10 and deal['discount'] == 100):
+                    click.secho(u"------------------------------------------------------")
+                click.secho(u"{name} ({release_date}). Score: {score}. Age: {age}".format(name=deal['name'], release_date=deal['release_date'].strftime("%b %Y", ), score=deal['score'], age=deal['age']), fg='blue')
                 # click.secho(u"Price: ${price}.\nOriginal price: ${orig_price}.\nSavings: ${savings}".format(price=deal['price'],name=deal['name'], discount=deal['discount'], orig_price=deal['orig_price'], savings=deal['savings']))
 
                 if deal['price'] == 0:
@@ -57,11 +74,28 @@ def show(psndeals, platform, country, sort, reverse_sort):
                     click.secho(u"Price: ${price}".format(price=deal['price']))
                 click.secho(u"Original price: ${orig_price}.".format(orig_price=deal['orig_price']))
                 click.secho(u"Savings: ${savings}".format(savings=deal['savings']))
+                click.secho(u"Discount: {discount}%".format(discount=deal['discount']))
 
                 # print(i)
                 # print(len(deals)-1)
                 if i == len(deals)-1:
                     click.secho(u"------------------------------------------------------")
+
+        if table:
+            print(tabulate(deals_filtered, headers={
+                'discount': 'Discount',
+                'name':'Name',
+                'score': 'Score',
+                'release_date': 'Released',
+                'orig_price': "Original Price",
+                'price': "Price",
+
+
+            }, tablefmt='fancy_grid'))
+
+
+
+
 
 
 
@@ -129,14 +163,30 @@ def get_deals(platform, country):
             response_data = json.loads(response.content)
             for item in response_data['links']:
                 if 'default_sku' in item:
+
+                    release_date = datetime.datetime.strptime(item['release_date'], "%Y-%m-%dT%H:%M:%SZ")
+                    savings = round((item['default_sku']['price'] / 100 * item['default_sku']['rewards'][0]['discount'] / 100),2)
+                    discount = item['default_sku']['rewards'][0]['discount']
+                    now = datetime.datetime.today()
+                    age = (now.year - release_date.year)*12 + now.month - release_date.month
+                    if age < 1:
+                        age = 1
+
+                    if discount > 0:
+                        score = float(discount) / float(age) / 10
+                    else:
+                        score = 0
+
                     deals.append({
                         'psn_sku_id': item['id'],
                         'name': item['name'],
-                        'discount': item['default_sku']['rewards'][0]['discount'],
+                        'discount': discount,
                         'orig_price': (item['default_sku']['price'] / 100),
                         'price': (item['default_sku']['rewards'][0]['price'] / 100),
-                        'savings': round((item['default_sku']['price'] / 100 * item['default_sku']['rewards'][0]['discount'] / 100),2),
-                        'release_date': time.strptime(item['release_date'], "%Y-%m-%dT%H:%M:%SZ") # 2015-12-05T00:00:00Z
+                        'savings': savings,
+                        'release_date': release_date,
+                        'score':  round(score, 2),
+                        'age': age,
                     })
         else:
             # If response code is not ok (200), print the resulting http error code with description
