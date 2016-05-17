@@ -12,7 +12,9 @@ setup(
             'mechanize',
             'requests_oauthlib',
             'cookiejar',
-            'tabulate'
+            'tabulate',
+            'flask',
+            'gunicorn',
 
         ],
         entry_points='''
